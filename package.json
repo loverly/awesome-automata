@@ -1,10 +1,26 @@
 {
   "name": "awesome-automata",
+  "description": "A generic finite state machine",
   "version": "0.0.1",
   "author": {
     "name": "Brandon Eum",
     "email": "brandon@lover.ly"
   },
+  "license": "MIT",
+  "keywords": [
+    "finite state machine",
+    "states",
+    "state machine",
+    "automata",
+    "automaton",
+    "fsm",
+    "lexer"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/loverly/awesome-automata"
+  },
+  "main": "lib/AwesomeAutomata.js",
   "dependencies": {
     "lodash": "^3.8.0"
   }
