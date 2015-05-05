@@ -1,82 +1,58 @@
 # Awesome Automata
 
 This is a general purpose [finite state machine](http://en.wikipedia.org/wiki/Finite-state_machine) 
-implementation meant to take a stream of input, apply the appropriate transitions,
+implementation meant to take a series of inputs, apply the appropriate transitions,
 and reach a set of __final__ or __accepting__ states and terminal states that
 reset the machine.
 
-For circular machines like stop lights and vending machines, whenever the
-initial 
+For circular machines like stop lights, there is an option to limit the maximum 
+history retained to prevent a memory blow-out over time. 
+
+This FSM extends the Node.js EventEmitter core class.  The events and their details
+are described in the [API Reference](#api-reference).
 
 
 # Don't We Have Enough Robots?
 
-There were two primary motivating factors for creating this utility:
+I built this library to:
 
-1. Implement a general purpose streaming Finite State Automata (that actually
-   implements the Node.js [streams API](https://nodejs.org/api/stream.html)
-1. Make specifying the transition function for the machine easier
+1. Make defining the states of the machine easy but robust enough to handle most
+   situations
+1. Provide a generic interface for utilizing the machine
 
-The reason the streaming portion is so crucial to this implementation is that it
-is geared towards a streaming lexer, meant to gather a stream of input and
-transform that input stream into an output stream of tokens.  As of this
-library's creation (May 2015) no popular Node.js streaming FSM implementations
-exist.
+As part of the generic interface - there's only a `next(input)` method and I assume
+that the states defined know how to deal with the arbitrary input.  This is in
+contrast to the popular state machine library [Machina.js](http://machina-js.org/),
+which favors code readability by providing custom method names per machine.
 
-More specialized implementations of Finite State Machines include:
+My specific motivation was to build an FSM that can support a streaming lexer for
+a custom Markdown parser that we have in the works.  Most parsers I found were
+not stream-friendly (using a ton of regular expressions) which would be CPU
+intensive in a high-traffic environment with decent-sized input files.
 
-* [Machina.js](http://machina-js.org/) - Specializes the machine with transition
-  functions with names based on the machine's DSL (`vehicleSignal.pedestrianWaiting();`).
+That's also why this library is not browser friendly at this time.  In the future
+I could see adding a build step that would resolve/remove the lodash dependency and
+combine and minify the source files, but I have no use for that currently.  I'd
+like to see how the library evolves over time before investing in that step.
 
 
 # How is this easier to use?
 
-Focusing on its origins as the basis for a lexer, the basic options for specifying
-a state graph for a lexer is simple:
-
+States are defined via objects (and can be added in batch or one-by-one).  They
+follow the format:
 
 ```javascript
-
-var fsm = new AwesomeAutomata({
-  mode: 'lexer',
-  
-  // Lexer specific configuration:
-  // Provide a list of final nodes that return tokens
-  // The state machine will automatically create intermediate states and create
-  // a giant graph that connects all of the nodes
-  lexemes: [
-    // Describe the terminal and provide a function that will create the appropriate
-    // attribute value from the raw string
-    {terminal: '_', name: 'em-marker', attributeValue: function (token) { return token; }},
-    {terminal: '__', name: 'strong-marker', attributeValue: null},
-    {terminal: '*', name: 'em-marker', attributeValue: function (token) { return token; }},
-    {terminal: '**', name: 'strong-marker', attributeValue: null},
-
-    // ...
-  ]
-});
-
-```
-
-Defining a more general purpose state graph is a little more complicated (but is
-what the `lexer` mode does for you under the hood) and requires you to explicitly
-map the state transitions.
-
-The general mode also allows you to specify an input
- 
- 
-```javascript
-var fsm = new AwesomeAutomata({mode: 'generic'});
+var fsm = new AwesomeAutomata({name: 'generic', debug: true});
 
 fsm.addStates([{
-  name: 'my-state-name', // For names and for creating the diagram
+  name: 'my-state-name', // For transition targets - must be unique
 
   // Determines if this state has a return value
-  accept: function (aggregateValue, input, visitedStates) {
-    this.accept({/* Some object representing the return value */});
+  accept: function (input, history) {
+    return {/* Some object representing the return value */};
   },
   
-  // The root node of the graph
+  // The root node of the graph - only one allowed per graph
   isInitial: true, 
   
   // Flag whether or not we should return to the root node upon completion
@@ -95,25 +71,33 @@ fsm.addStates([{
   // If possible, ordering the most popular states at the top will cause the
   // state machine to be slightly faster (but only marginally so).
   outgoingTransitions: [
-    {state: 'self', criteria: 'something'}, // Special state transition to indicate a loop
-    {state: 'my-other-state', criteria: function (input) { return !!input; }}
+    // States can be self-referencing
+    {state: 'my-state-name', criteria: 'something'},
+     
+    // The criteria can be a value (verified by ===) or a custom function that
+    // takes the current input and the previous state.  Should return a boolean
+    // to say whether or not this is the correct transition
+    {state: 'my-other-state', criteria: function (input, previousState) { 
+      return !!input; 
+    }}
   ]
 }]);
 ```
 
+The incremental addition of states via the `addState()` method allows the graph
+to be built dynamically by another library (such as a lexer wrapper like 
+[lexerific](https://github.com/loverly/lexerific)).
+
 
 # How does it work?
 
-As input enters into the machine, the machine consistently looks ahead 1 chunk
-to determine what the next state should be.
-
-For each outgoing transition it runs the compare function to understand if the
-input element belongs to this state (`true` or `false`).  If the value in
-compare is a literal, it does a `===` comparison with the input value to verify
-if the state is a match.
+As input enters into the machine, the machine checks the input against the transitions
+defined by the current state.  If it finds a transition that matches the given
+input (as well as information about the previous state) then the state machine
+updates its current state and history.
 
 For _final_ or _accepting_ states, whenever they are called they fire the `accept()`
-method and ultimately the `accept` event or - in the case of using the stream
+method and ultimately the `return` event or - in the case of using the stream
 mode - passes the object to the outgoing stream.  These do not necessarily need
 to be final states - however, be warned, non-terminating accepting states in a 
 lexer does not make any sense, but may make sense in other contexts.
@@ -134,10 +118,117 @@ all possible input values for a given state.
 Not yet... you'll have to make-do with debugging for now.
 
 __TODO:__ Create a formatter that visits all possible states and creates a DOT
-language file that can be used in conjunction with GraphViz.
+language file that can be used in conjunction with a lib like GraphViz to create
+a visual hierarchy.
 
 
-# Under the hood
+# API Reference
+
+# AwesomeAutomata
+
+The main class - what is returned from `require('awesome-automata')`.
+
+`AwesomeAutomata` is a subclass of the Node.js `EventEmitter` library and emits
+the following events:
+
+* `error` - Fired for runtime errors that affect a particular state (like
+  invalid or no outbound transitions)
+* `reset` - Emitted whenever the machine is reset to its initial state, either
+             after an error or after a terminal state
+* `return` - Returns a value based on the accepting state's accept method.
+  Fired whenever the state machine enters an accepting state.
+* `change` - Marks a transition between states
+
+For fatal errors - the state machine will throw exceptions (when a state is
+defined in an unusable way).  For runtime issues (like a bad input or bad
+transition), the machine will emit an `error` event.
+
+If you are dynamically creating a machine on unvalidated input - be careful to
+wrap `addState()` or `addStates()` calls in a `try / catch` block or your app
+may crash.  OR even better, provide validation so you can ensure that states
+are valid.
+
+
+## constructor(config)
+
+```javascript
+var fsm = new AwesomeAutomata({
+  name: 'my-machine-name',
+  debug: true,
+  maxHistory: 10
+});
+```
+
+Options:
+
+* `name` - For debugging purposes, the name of the state machine
+* `debug` - Either `true` to enable console output or a function to handle debug 
+  info
+* `maxHistory` - Throw away the state transition history after a certain number
+  of steps.  Useful for circular machines that may never reset. 
+
+
+## getState()
+
+Returns the current state of the machine
+
+```javascript
+fsm.getState(); // {state: 'my-state', history: [{state: 'other', input: 1}, ... ]}
+```
+
+## addState(stateConfig)
+
+Add a node and set of edges to the state machine's graph via a configuration object.
+
+Options:
+
+* `name` - Must be unique.  Used as a key for transitions between states.
+* `isIntitial` - This node is the starting node when the state machine is first
+  run or when it is reset
+* `isTerminal` - When the machine reaches this node, the machine is reset (all
+  values and history are erased, state set to the initial node)
+* `accept` - A method for a state that emits a returned value
+* `outgoingTransitions` - Each state only tracks outbound connections.  This must
+  be an array and should contain objects that have the properties:
+  * `state` - The name of target state this edge is connecting to
+  * `criteria` - Either a primitive (which will be compared with the input via
+    `===` strict equality, or a function that accepts `(input, previousState)`
+    as parameters and returns a boolean value indicating whether or not this
+    transition matches the input and the current state.
 
 
 
+## addStates(arrayOfStates)
+
+The same as `addState()` except it accepts an array of state configuration objects
+versus a single object.
+
+
+## next(input[, callback])
+
+Inputs are completely arbitrary, as long as the state definitions can deal with
+it, anything goes.  The only caveat is that they must be complete, in the sense
+that each input corresponds to one state transition (even if it is self-referencing
+to the current state).  Every valid input must have a corresponding transition
+from the current state to another target state.  If there is no transition, an
+`error` event is emitted.
+
+Optionally a callback can be passed, which will be called after the transition
+has occurred.  The callback call will be wrapped in a `setImmediate()` call,
+allowing events to be handled before the next input is called (if that matters
+to you).
+
+This is especially useful if you are feeding your input from a synchronous source.
+Without either passing a callback to use a recursive loop to control your input
+flow or explicitly releasing the event loop, your machine will not process any
+events until all the input has been entered into the machine.  Causing much
+weirdness.
+
+
+## reset()
+
+You can forcibly reset the machine by calling `fsm.reset()`.  Note, this will
+still fire a `reset` event.
+
+Resetting the machine brings it back to the initial node and erases any history
+and the previous state.  Terminal states have the same effect.
