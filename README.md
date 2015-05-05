@@ -5,6 +5,9 @@ implementation meant to take a stream of input, apply the appropriate transition
 and reach a set of __final__ or __accepting__ states and terminal states that
 reset the machine.
 
+For circular machines like stop lights and vending machines, whenever the
+initial 
+
 
 # Don't We Have Enough Robots?
 
@@ -68,12 +71,7 @@ var fsm = new AwesomeAutomata({mode: 'generic'});
 fsm.addStates([{
   name: 'my-state-name', // For names and for creating the diagram
 
-  // Whether or not the input matches this state
-  compare: function (input) {
-    return boolean;
-  },
-  
-  // Determines if this state is a final state
+  // Determines if this state has a return value
   accept: function (aggregateValue, input, visitedStates) {
     this.accept({/* Some object representing the return value */});
   },
@@ -97,8 +95,8 @@ fsm.addStates([{
   // If possible, ordering the most popular states at the top will cause the
   // state machine to be slightly faster (but only marginally so).
   outgoingTransitions: [
-    {state: 'self'}, // Special state transition to indicate a loop
-    {state: 'my-other-state'}
+    {state: 'self', criteria: 'something'}, // Special state transition to indicate a loop
+    {state: 'my-other-state', criteria: function (input) { return !!input; }}
   ]
 }]);
 ```
@@ -137,4 +135,9 @@ Not yet... you'll have to make-do with debugging for now.
 
 __TODO:__ Create a formatter that visits all possible states and creates a DOT
 language file that can be used in conjunction with GraphViz.
+
+
+# Under the hood
+
+
 

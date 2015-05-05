@@ -4,5 +4,8 @@
   "author": {
     "name": "Brandon Eum",
     "email": "brandon@lover.ly"
+  },
+  "dependencies": {
+    "lodash": "^3.8.0"
   }
 }
