@@ -79,7 +79,13 @@ fsm.addStates([{
     // to say whether or not this is the correct transition
     {state: 'my-other-state', criteria: function (input, previousState) { 
       return !!input; 
-    }}
+    }},
+    
+    // As part of the outbound transition - fire a `return` event as a transition
+    // action
+    {state: 'my-return-on-transition-state', criteia: 123, accept: function (input, previousState) {
+      return 'something cool';
+    }};
   ]
 }]);
 ```
@@ -195,6 +201,8 @@ Options:
     `===` strict equality, or a function that accepts `(input, previousState)`
     as parameters and returns a boolean value indicating whether or not this
     transition matches the input and the current state.
+  * `accept` - A function that will return a value based on the current state,
+    input, and anticipated transition.
 
 
 

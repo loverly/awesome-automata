@@ -17,7 +17,11 @@
 
 var AwesomeAutomata = require('../lib/AwesomeAutomata');
 
-var vendingMachine = new AwesomeAutomata({name: 'vending-machine', debug: true});
+var vendingMachine = new AwesomeAutomata({
+  name: 'vending-machine',
+  debug: true,
+  maxHistory: 10
+});
 
 vendingMachine.addStates([
   {
@@ -34,7 +38,9 @@ vendingMachine.addStates([
     compare: 0.05,
     outgoingTransitions: [
       {state: '$0.10', criteria: 0.05},
-      {state: '$0.15', criteria: 0.10}
+      {state: '$0.05', criteria: 0.10, accept: function (input, previousState) {
+        return {candyBars: 1};
+      }}
     ]
   },
   {
@@ -43,16 +49,7 @@ vendingMachine.addStates([
 
     // The return value will be the new aggregate value
     accept: function (input, history) {
-      this.onAccept({candyBars: 1, change: aggregateValue - 0.10});
-    }
-  },
-  {
-    name: '$0.15',
-    isTerminal: true,
-
-    // Return a candy bar and the user's change
-    accept: function (input, history) {
-      return {candyBars: 1, change: 0.05};
+      return {candyBars: 1};
     }
   }
 ]);
