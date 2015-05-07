@@ -38,7 +38,7 @@ vendingMachine.addStates([
     compare: 0.05,
     outgoingTransitions: [
       {state: '$0.10', criteria: 0.05},
-      {state: '$0.05', criteria: 0.10, accept: function (input, previousState) {
+      {state: '$0.05', criteria: 0.10, accept: function (input, history) {
         return {candyBars: 1};
       }}
     ]
