@@ -52,7 +52,7 @@ describe('State', function () {
         accept: someFunc
       });
 
-      expect(myState.accept).to.equal(someFunc, true);
+      expect(myState.accept).to.equal(someFunc);
     });
   });
 
