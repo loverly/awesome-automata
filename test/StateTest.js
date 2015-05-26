@@ -57,15 +57,17 @@ describe('State', function () {
   });
 
   describe('_validateConfig(config', function () {
+    var testState = new State({
+      name: 'someName'
+    });
+
     it('Should require a name for the state', function() {
-      var testFunc = function() {return new State({})};
+      var testFunc = function() {testState._validateConfig({});};
 
       expect(testFunc).to.throw(Error);
 
       testFunc = function() {
-        return new State({
-          name: 'someName'
-        });
+        testState._validateConfig({name: 'someName'});
       };
 
       expect(testFunc).to.not.throw(Error);
@@ -77,7 +79,7 @@ describe('State', function () {
         isInitial: true,
         isTerminal: true
       };
-      var testFunc = function() {return new State(testConfig)};
+      var testFunc = function() {testState._validateConfig(testConfig)};
 
       expect(testFunc).to.throw(Error);
 
@@ -92,7 +94,7 @@ describe('State', function () {
 
     it('Should require that any provided outgoing transitions are passed in an array', function() {
       var testFunc = function() {
-        return new State({
+        testState._validateConfig({
           name: 'someName',
           outgoingTransitions: {}
         });
@@ -101,7 +103,7 @@ describe('State', function () {
       expect(testFunc).to.throw(Error);
 
       testFunc = function() {
-        return new State({
+        testState._validateConfig({
           name: 'someName',
           outgoingTransitions: 'anotherStates'
         });
@@ -110,7 +112,7 @@ describe('State', function () {
       expect(testFunc).to.throw(Error);
 
       testFunc = function () {
-        return new State({
+        testState._validateConfig({
           name: 'someName',
           outgoingTransitions: []
         });
@@ -121,7 +123,7 @@ describe('State', function () {
 
     it('Should require each outgoing transition to include a state name and a criteria', function() {
       var testFunc = function() {
-        return new State({
+        testState._validateConfig({
           name: 'someName',
           outgoingTransitions: [
             {criteria: 'something to test'}
@@ -132,7 +134,7 @@ describe('State', function () {
       expect(testFunc).to.throw(Error);
 
       testFunc = function() {
-        return new State({
+        testState._validateConfig({
           name: 'someName',
           outgoingTransitions: [
             {state: 'anotherState'}
@@ -143,7 +145,7 @@ describe('State', function () {
       expect(testFunc).to.throw(Error);
 
       testFunc = function () {
-        return new State({
+        testState._validateConfig({
           name: 'someName',
           outgoingTransitions: [
             {state: 'anotherState', criteria: 'something to test'}
@@ -156,7 +158,7 @@ describe('State', function () {
 
     it('Should require the accept method for each outgoing transition to be a function', function() {
       var testFunc = function() {
-        return new State({
+        testState._validateConfig({
           name: 'someName',
           outgoingTransitions: [
             {state: 'anotherState', criteria: 'something to test', accept: 'acceptanceAction'}
@@ -167,7 +169,7 @@ describe('State', function () {
       expect(testFunc).to.throw(Error);
 
       testFunc = function () {
-        return new State({
+        testState._validateConfig({
           name: 'someName',
           outgoingTransitions: [
             { state: 'anotherState', criteria: 'something to test', accept: function() {return true;} }
@@ -180,7 +182,7 @@ describe('State', function () {
 
     it('Should require a terminal state to have no outgoing transitions', function() {
       var testFunc = function() {
-        return new State({
+        testState._validateConfig({
           name: 'someName',
           isTerminal: true,
           outgoingTransitions: [
@@ -192,7 +194,7 @@ describe('State', function () {
       expect(testFunc).to.throw(Error);
 
       testFunc = function() {
-        return new State({
+        testState._validateConfig({
           name: 'someName',
           isTermianl: true
         })
@@ -203,7 +205,7 @@ describe('State', function () {
 
     it('Should require the accept property to be a function', function() {
       var testFunc = function() {
-        return new State({
+        testState._validateConfig({
           name: 'someName',
           accept: 'acceptanceAction'
         });
@@ -212,7 +214,7 @@ describe('State', function () {
       expect(testFunc).to.throw(Error);
 
       testFunc = function () {
-        return new State({
+        testState._validateConfig({
           name: 'someName',
           accept: function() {return true;}
         });
