@@ -69,7 +69,7 @@ vendingMachine.on('return', function (value) {
 });
 
 
-var info = vendingMachine.getState();
+var info = vendingMachine.getCurrentState();
 console.log('> Starting state:', info, '\n'); // {state: '$0.00', history: []}
 
 vendingMachine.next(0.05);
